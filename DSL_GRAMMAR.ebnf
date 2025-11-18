@@ -1,13 +1,18 @@
 (* ========================================== *)
-(* Credit Card DSL - Complete Formal Grammar v3.1 *)
+(* Credit Card DSL - Complete Formal Grammar *)
 (* ========================================== *)
 (* EBNF Notation - ISO/IEC 14977 *)
-(* Date: 2025-11-17 *)
-(* Status: Complete specification including all features *)
-(*   - v1.0: Basic entities, workflows, rules *)
-(*   - v2.0: Action library *)
-(*   - v3.0: Pipeline syntax, implicit infrastructure *)
-(*   - v3.1: Decision tables *)
+(* Status: Complete specification *)
+(*
+   Features:
+   - Entity definitions (9 data mutation patterns)
+   - Workflow definitions (traditional and pipeline syntax)
+   - Rule definitions (procedural and decision tables)
+   - Parameter definitions (PCF)
+   - Reference data definitions
+   - Error strategies and configuration
+   - Action definitions
+*)
 (* ========================================== *)
 
 (* ========================================== *)
@@ -848,50 +853,6 @@ special_char = "!" | "@" | "#" | "$" | "%" | "^" | "&" | "*" | "(" | ")" |
        - load email_template from templates
        - substitute customer.name, credit_limit
        - send email to customer.email
-*)
-
-
-(* ========================================== *)
-(* VERSION COVERAGE SUMMARY *)
-(* ========================================== *)
-
-(* This grammar covers ALL features from ALL versions:
-
-   ✅ v1.0 (Initial Specification):
-      - Entity definitions (9 patterns)
-      - Workflow definitions (traditional actions)
-      - Procedural rules (calculate, evaluate, validate)
-      - Parameter definitions (PCF)
-      - Reference data definitions
-      - Type system (10 types)
-      - Relationships and constraints
-
-   ✅ v2.0 (Action Library):
-      - Built-in action definitions
-      - Custom action templates
-      - External action references
-      - Action parameter specifications
-
-   ✅ v3.0 (Pipeline Syntax & Infrastructure):
-      - Pipeline expressions (filter, map, foreach, etc.)
-      - Aggregation operators (count, sum, avg, etc.)
-      - Join operators
-      - Error handling operators
-      - Configuration blocks
-      - Error strategy definitions
-      - Backward compatibility with v1.0/v2.0
-
-   ✅ v3.1 (Decision Tables):
-      - Decision table syntax
-      - Condition cells (exact, range, expression, function)
-      - Action cells (return values, executable actions)
-      - Multiple action columns
-      - Priority ordering
-      - Wildcards and defaults
-      - Hybrid return/execute tables
-
-   Total Coverage: 100% of all discussed features
-   Missing: None - all features captured
 *)
 
 

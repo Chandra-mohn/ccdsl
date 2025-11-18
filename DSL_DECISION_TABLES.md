@@ -1,9 +1,7 @@
-# Decision Tables Specification - DSL v3.1
+# Decision Tables Specification
 
-**Date**: 2025-11-17
 **Feature**: Matrix-based decision/conditional logic
-**Status**: Design Specification
-**Target Version**: v3.1 (after v3.0 pipeline syntax)
+**Status**: Complete Specification
 
 ---
 
