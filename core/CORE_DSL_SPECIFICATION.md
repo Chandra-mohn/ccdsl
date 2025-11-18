@@ -1,7 +1,9 @@
-# Credit Card Domain-Specific Language - Complete Specification
+# Core DSL Specification
 
+**Layer**: Foundation / Technical Infrastructure
+**Purpose**: Provides reusable technical constructs for all financial domain DSLs
 **Status**: Production Specification
-**Companion Documents**: DSL_SAMPLES.md, DSL_DECISION_TABLES.md, DSL_GRAMMAR.ebnf
+**Version**: 3.0.0
 
 ---
 
@@ -10,7 +12,7 @@
 ### I. OVERVIEW & INTRODUCTION
 1. [Executive Summary](#executive-summary)
 2. [Design Philosophy](#design-philosophy)
-3. [Quick Start Guide](#quick-start-guide)
+3. [Module System](#module-system)
 
 ### II. LANGUAGE REFERENCE
 4. [Naming Conventions](#naming-conventions)
@@ -20,8 +22,8 @@
 
 ### III. CORE CONCEPTS
 8. [Data Mutation Patterns](#data-mutation-patterns)
-9. [BIAN Integration](#bian-integration)
-10. [Execution Context (DOM)](#execution-context-dom)
+9. [Execution Context (DOM)](#execution-context-dom)
+10. [Infrastructure Abstraction](#infrastructure-abstraction)
 
 ### IV. LANGUAGE CONSTRUCTS
 11. [Entity Definitions](#entity-definitions)
@@ -37,9 +39,7 @@
 
 ### VI. APPENDICES
 19. [Complete Keyword List](#complete-keyword-list)
-20. [BIAN Terminology Reference](#bian-terminology-reference)
-21. [Migration Guide](#migration-guide)
-22. [Compiler Directives](#compiler-directives)
+20. [Compiler Directives](#compiler-directives)
 
 ---
 
@@ -47,14 +47,14 @@
 
 ## Executive Summary
 
-The Credit Card DSL is a **business-friendly, domain-specific language** for defining credit card processing logic with:
+The Core DSL is a **business-friendly, domain-specific language** for defining financial services processing logic with:
 
 - **Pattern-based data mutation** (hide implementation complexity)
-- **BIAN alignment** (banking industry standard architecture)
 - **Rule-based business logic** (compiled to high-performance code)
-- **Workflow orchestration** (payment processing, fee assessment, disputes)
+- **Workflow orchestration** (process automation)
 - **Type safety** (compile-time validation)
 - **Audit-ready** (automatic tracking and compliance)
+- **Modular architecture** (domain-agnostic foundation)
 
 ### Key Innovations
 
@@ -62,9 +62,8 @@ The Credit Card DSL is a **business-friendly, domain-specific language** for def
 2. **Business Readability**: Natural language syntax, readable by non-programmers
 3. **Complete Consistency**: One naming rule (snake_case) for everything
 4. **Transparent DOM**: Execution context hidden from DSL, exposed in implementation
-5. **Regulatory Compliance**: Built-in CARD Act compliance, audit trails
-6. **Pipeline Syntax (v3.0)**: Map-filter-reduce operators for data transformations
-7. **Implicit Infrastructure (v3.0)**: Storage and error handling abstracted automatically
+5. **Pipeline Syntax (v3.0)**: Map-filter-reduce operators for data transformations
+6. **Implicit Infrastructure (v3.0)**: Storage and error handling abstracted automatically
 
 ### What Gets Generated
 
@@ -85,7 +84,7 @@ From DSL specifications, the compiler generates:
 **1. Business Intent Over Implementation**
 ```
 DSL describes WHAT, compiler handles HOW
-User writes: "calculate late fee"
+User writes: "calculate fee"
 Compiler generates: SQL, Rust, API endpoints, audit logs
 ```
 
@@ -110,9 +109,9 @@ Immutability enforcement
 
 **5. Standards Over Invention**
 ```
-BIAN terminology alignment
-Industry best practices
-Regulatory compliance built-in
+Industry terminology alignment
+Best practices built-in
+Regulatory compliance
 ```
 
 ### Design Decisions
@@ -121,7 +120,7 @@ Regulatory compliance built-in
 |----------|-----------|
 | **snake_case everywhere** | Complete consistency, Python/YAML style |
 | **yes/no for booleans** | More natural than true/false |
-| **$X.XX for money** | Readable, unambiguous currency |
+| **amount currency format** | Readable, unambiguous (e.g., 100.00 USD) |
 | **Pattern-first** | Implementation hidden from users |
 | **Indentation-based** | Clean, familiar (YAML/Python) |
 | **Lowercase keywords** | Language constructs distinct from user identifiers |
@@ -129,87 +128,56 @@ Regulatory compliance built-in
 
 ---
 
-## Quick Start Guide
+## Module System
 
-### 1. Define an Entity
+### Module Declaration
 
-```
-define entity: customer
-  pattern: master_data
-
-  identity:
-    customer_id: text, unique, required
-
-  profile:
-    full_name: text, required
-    email: email, required
-
-  must:
-    - email is valid format
-```
-
-**Compiler generates**: customer table, customer_history table, CRUD APIs, audit triggers
-
-### 2. Define a Workflow
+Every Core DSL module must declare its identity and version:
 
 ```
-define workflow: payment_processing
-  triggered_by:
-    - payment received
-
-  inputs:
-    - account: account
-    - payment_amount: money
-
-  outputs:
-    - payment_status: text
-
-  step: process_payment
-    actions:
-      - record payment
-      - update account balance
-
-    return:
-      - payment_status: completed
+module: core.entity
+version: 2.0.0
+stability: stable
 ```
 
-**Compiler generates**: Rust workflow function, API endpoint, transaction management
+### Versioning
 
-### 3. Define Business Rules
+Core modules follow semantic versioning (MAJOR.MINOR.PATCH):
+- **MAJOR**: Breaking changes to syntax or semantics
+- **MINOR**: New features, backward compatible
+- **PATCH**: Bug fixes, clarifications
+
+### Core Modules
+
+1. **core.entity** - Entity definitions with mutation patterns
+2. **core.workflow** - Workflow orchestration and process flows
+3. **core.rules** - Business logic and decision structures
+4. **core.parameter** - Runtime configuration parameters (PCF)
+5. **core.reference** - Reference data and lookup tables
+
+### Future Modules
+
+6. **core.api** - API definitions (REST, GraphQL)
+7. **core.ui** - User interface components
+
+### Usage by Domain DSLs
+
+Domain DSLs import core modules:
 
 ```
-define rules: late_fee_calculation
-  pattern: business_logic
+module: domain.payments
+version: 1.0.0
 
-  rule: calculate_fee_amount
-    given:
-      - account_balance: money
+imports:
+  - core.entity >= 2.0.0
+  - core.workflow >= 2.0.0
+  - core.rules >= 2.0.0
 
-    calculate:
-      fee = when balance >= $5000: $40
-            when balance >= $1000: $35
-            otherwise: $25
-
-    return:
-      - fee_amount: money
+// Use core constructs with domain-specific knowledge
+define entity: payment_account
+  pattern: master_data  // from core.entity
+  // domain-specific fields
 ```
-
-**Compiler generates**: Rust function with compile-time type checking, zero runtime overhead
-
-### 4. Define Parameters (PCF)
-
-```
-define parameters: late_fee_settings
-  pattern: operational_parameters
-
-  parameter: grace_period_days
-    type: number
-    current_value: 15
-    range: 10 to 30
-    can_schedule: yes
-```
-
-**Compiler generates**: Parameter table, hot-reload API, change tracking
 
 ---
 
@@ -231,8 +199,8 @@ define parameters: late_fee_settings
 ```
 # Entities
 customer                    # ✓
-card_product                # ✓
-late_fee_schedule           # ✓
+payment_account             # ✓
+fee_schedule                # ✓
 
 # Fields
 customer_id                 # ✓
@@ -242,7 +210,6 @@ on_time_percentage          # ✓
 # Enum Values
 premier                     # ✓
 late_fee                    # ✓
-delinquent_30               # ✓
 active                      # ✓
 
 # Workflows
@@ -262,7 +229,7 @@ auto_waiver_limit           # ✓
 
 ```
 Customer                    # ✗ PascalCase
-cardProduct                 # ✗ camelCase
+paymentAccount              # ✗ camelCase
 LATE_FEE                    # ✗ SCREAMING_SNAKE_CASE
 payment-processing          # ✗ kebab-case
 ```
@@ -277,7 +244,7 @@ payment-processing          # ✗ kebab-case
 |------|-------------|----------------|
 | `text` | String values | "John Doe", "ABC123" |
 | `number` | Integer or decimal | 42, 3.14, -100 |
-| `money` | Money amounts | $25.00, $1000.50 |
+| `money` | Money amounts | 25.00 USD, 1000.50 EUR |
 | `date` | Calendar dates | 2024-01-15 |
 | `timestamp` | Date + time | 2024-01-15T10:30:00Z |
 | `boolean` | yes/no values | yes, no |
@@ -292,7 +259,7 @@ payment-processing          # ✗ kebab-case
 - **Entity references**: Use entity name (snake_case)
   ```
   belongs_to: customer        # References customer entity
-  uses: card_product          # References card_product entity
+  uses: product_config        # References product_config entity
   ```
 
 - **Enum values**: Use snake_case literals
@@ -370,7 +337,7 @@ field_name: text  # Inline comment
 
 ```
 description: "This is a text value"      # ✓ Double quotes for strings
-message: "Late fee assessed"             # ✓
+message: "Fee assessed"                  # ✓
 
 # No quotes for identifiers
 belongs_to: customer                      # ✓ Identifier, no quotes
@@ -428,7 +395,6 @@ reference       # Reference data declaration
 
 ```
 pattern         # Pattern declaration
-business_domain # BIAN business domain
 description     # Human-readable description
 identity        # Identity fields section
 references      # Foreign key relationships
@@ -524,7 +490,7 @@ today           # Current date function
 
 #### 1. master_data (Slowly Changing Dimension)
 
-**Use Case**: Customer profiles, account details, merchant information
+**Use Case**: Customer profiles, account details, entity master data
 
 **Characteristics**:
 - Mutable with full history tracking (SCD Type 2)
@@ -593,7 +559,7 @@ CREATE TABLE customer_history (
 
 **Example**:
 ```
-define entity: fee_transaction
+define entity: transaction
   pattern: immutable_ledger
 
   identity:
@@ -606,7 +572,7 @@ define entity: fee_transaction
 
 **Generated Constraints**:
 ```sql
-CREATE TABLE fee_transaction (
+CREATE TABLE transaction (
   transaction_id VARCHAR(100) PRIMARY KEY,
   amount DECIMAL(15,2) NOT NULL,
   transaction_date DATE NOT NULL,
@@ -633,7 +599,7 @@ CREATE TABLE fee_transaction (
 
 **Example**:
 ```
-define entity: card_product
+define entity: product_config
   pattern: versioned_configuration
 
   identity:
@@ -664,7 +630,7 @@ define entity: card_product
 
 **Example**:
 ```
-define parameters: late_fee_settings
+define parameters: fee_settings
   pattern: operational_parameters
 
   parameter: grace_period_days
@@ -677,7 +643,7 @@ define parameters: late_fee_settings
 
 #### 5. event_log (Append-Only Event Stream)
 
-**Use Case**: Audit events, calculation events, waiver events
+**Use Case**: Audit events, calculation events, system events
 
 **Characteristics**:
 - Append-only
@@ -691,19 +657,20 @@ define parameters: late_fee_settings
 
 **Example**:
 ```
-define entity: fee_calculation_event
+define entity: calculation_event
   pattern: event_log
 
   event_details:
     event_timestamp: timestamp, default now
-    fee_amount: money
+    event_type: text
+    event_data: text
 ```
 
 ---
 
 #### 6. state_machine (Workflow State Tracking)
 
-**Use Case**: Delinquency status, case status, application workflow
+**Use Case**: Status tracking, application workflow, process states
 
 **Characteristics**:
 - Valid state transitions only
@@ -718,23 +685,24 @@ define entity: fee_calculation_event
 
 **Example**:
 ```
-define entity: delinquency_state
+define entity: process_state
   pattern: state_machine
 
-  current_state: text, values: current | delinquent_15 | delinquent_30
+  current_state: text, values: pending | approved | rejected
 
-  initial_state: current
+  initial_state: pending
 
   transitions:
-    from current: delinquent_15
-    from delinquent_15: current, delinquent_30
+    from pending: approved, rejected
+    from approved: none
+    from rejected: none
 ```
 
 ---
 
 #### 7. temporal_data (Effective-Dated Values)
 
-**Use Case**: APR rates, credit limits - values that change over time
+**Use Case**: Interest rates, limits - values that change over time
 
 **Characteristics**:
 - Point-in-time queries
@@ -745,11 +713,22 @@ define entity: delinquency_state
 - temporal table
 - set_effective(), get_at_date(), get_current(), get_timeline()
 
+**Example**:
+```
+define entity: interest_rate
+  pattern: temporal_data
+
+  for_account: account
+  rate_percentage: percentage
+  effective_from: date
+  effective_until: date, optional
+```
+
 ---
 
 #### 8. reference_data (Lookup Tables)
 
-**Use Case**: Fee types, customer segments, MCC codes
+**Use Case**: Fee types, customer segments, category codes
 
 **Characteristics**:
 - Shared reference data
@@ -760,6 +739,16 @@ define entity: delinquency_state
 - reference table
 - register(), update(), deprecate(), retrieve()
 - Usage tracking
+
+**Example**:
+```
+define reference_data: fee_types
+  pattern: reference_data
+
+  entries:
+    - code: "late_fee", name: "Late Payment Fee"
+    - code: "annual_fee", name: "Annual Membership Fee"
+```
 
 ---
 
@@ -780,7 +769,7 @@ define entity: delinquency_state
 
 **Example**:
 ```
-define rules: late_fee_calculation
+define rules: fee_calculation
   pattern: business_logic
 
   rule: calculate_fee_amount
@@ -788,7 +777,9 @@ define rules: late_fee_calculation
       - balance: money
 
     calculate:
-      fee = when balance >= $5000: $40
+      fee = when balance >= 5000.00 USD: 40.00 USD
+            when balance >= 1000.00 USD: 35.00 USD
+            otherwise: 25.00 USD
 
     return:
       - fee_amount: money
@@ -799,55 +790,15 @@ define rules: late_fee_calculation
 pub fn calculate_fee_amount(
   balance: Money
 ) -> Money {
-  if balance >= Money::usd(5000, 0) {
-    Money::usd(40, 0)
-  } else { ... }
+  if balance >= Money::new(5000, 0, "USD") {
+    Money::new(40, 0, "USD")
+  } else if balance >= Money::new(1000, 0, "USD") {
+    Money::new(35, 0, "USD")
+  } else {
+    Money::new(25, 0, "USD")
+  }
 }
 ```
-
----
-
-## BIAN Integration
-
-### What is BIAN?
-
-**BIAN** (Banking Industry Architecture Network) is the global standard for banking architecture:
-- 322+ service domains
-- 5,000+ service definitions
-- 250+ Semantic APIs
-- Industry-standard terminology
-
-### BIAN Service Domains Used
-
-| DSL Construct | BIAN Service Domain | Purpose |
-|---------------|---------------------|---------|
-| Customer, Account | Credit Card | Card fulfillment and tracking |
-| Workflows | Card Financial Settlement | Transaction processing |
-| Disputes | Card Case | Dispute management |
-| Delinquency | Card Collections | Collections activities |
-
-### BIAN Terminology Mapping
-
-```
-define entity: customer
-  business_domain: "Credit Card (BIAN)"
-  # Maps to BIAN Credit Card service domain
-
-define workflow: payment_processing
-  business_domain: "Card Financial Settlement (BIAN)"
-  # Maps to BIAN Card Financial Settlement
-```
-
-### Benefits of BIAN Alignment
-
-1. **Industry standardization**
-2. **Interoperability** with banking systems
-3. **Common vocabulary** across institutions
-4. **Regulatory compliance** (built-in best practices)
-
-### BIAN Reference
-
-See [BIAN Terminology Reference](#bian-terminology-reference) for complete mapping.
 
 ---
 
@@ -935,276 +886,9 @@ context.put("account", account)?;
 
 ---
 
-# IV. LANGUAGE CONSTRUCTS
+## Infrastructure Abstraction
 
-## Entity Definitions
-
-### Structure
-
-```
-define entity: entity_name
-  pattern: pattern_name
-  business_domain: "Domain (BIAN)"
-  description: "Entity purpose"
-
-  identity:
-    primary_key_field: type, unique, required
-
-  references:
-    belongs_to: other_entity
-    uses: configuration_entity
-
-  field_group_name:
-    field1: type, qualifiers
-    field2: type, qualifiers
-
-  relationships:
-    has_many: related_entities
-
-  must:
-    - constraint 1
-    - constraint 2
-```
-
-### Section Ordering (Required)
-
-1. `pattern:` (REQUIRED - must be first)
-2. `business_domain:` (optional)
-3. `description:` (optional)
-4. `identity:` (for entities with primary key)
-5. `references:` (foreign keys, configuration references)
-6. Custom field groups (any name, multiple allowed)
-7. `relationships:` (one-to-many relationships)
-8. `must:` (constraints)
-9. `operations:` (for specific patterns)
-
-### Complete Example
-
-```
-define entity: account
-  pattern: master_data
-  business_domain: "Credit Card (BIAN)"
-  description: "Customer credit card account"
-
-  identity:
-    account_id: text, unique, required
-
-  references:
-    belongs_to: customer
-    uses: card_product
-
-  account_details:
-    account_number: text, unique, cannot_change
-    opened_date: date, cannot_change
-    account_status: text, values: active | suspended | closed
-
-  financial_balances:
-    current_balance: money, required
-    credit_limit: money, required
-    available_credit: money, required
-
-  relationships:
-    has_many: fee_transactions
-
-  must:
-    - credit_limit >= $0
-    - available_credit <= credit_limit
-    - account_number is unique
-```
-
----
-
-## Workflow Definitions
-
-### Structure
-
-```
-define workflow: workflow_name
-  business_domain: "Domain (BIAN)"
-  description: "Workflow purpose"
-
-  triggered_by:
-    - trigger 1
-    - trigger 2
-
-  inputs:
-    - input1: type
-    - input2: type
-
-  outputs:
-    - output1: type
-    - output2: type
-
-  step: step_name_1
-    description: "Step purpose"
-
-    actions:
-      - action 1
-      - action 2
-
-    next:
-      when condition: goto step_name_2
-      otherwise: goto step_name_3
-
-  step: step_name_2
-    actions:
-      - action
-
-    return:
-      - field1: value1
-      - field2: value2
-```
-
-### Step Actions
-
-Actions describe what the step does. **v3.0 introduces pipeline syntax** for data transformations:
-
-**Traditional Actions** (v2.0 - still supported):
-```
-actions:
-  - load entity from reference
-  - calculate value using rule_name
-  - update entity.field
-  - create new_entity
-  - send notification to customer
-  - for each item in list: process item
-```
-
-**Pipeline Actions** (v3.0 - preferred for data processing):
-```
-actions:
-  - customers
-      | filter: validate_entity
-      | map: calculate_interest
-      | foreach: post_interest_charge
-      | sum: total_interest
-
-  - log_event("Processing complete", amount: total_interest)
-```
-
-**Pipeline Operators**:
-- `filter: condition` - Keep only matching records
-- `map: transformation` - Transform each record
-- `foreach: action` - Execute action on each (side effects)
-- `reduce: aggregation` - Combine into single value
-- `join: (alias => entity where condition)` - Navigate relationships
-- `group_by: field` - Group records
-- `order_by: field [asc|desc]` - Sort records
-- `take: n` - Limit results
-- `count: variable`, `sum: variable`, `avg: variable` - Aggregations
-- `on_validation_error: strategy` - Override error handling (optional)
-
-### Next Logic
-
-**Unconditional**:
-```
-next: goto step_name
-```
-
-**Conditional**:
-```
-next:
-  when condition: goto step_a
-  otherwise: goto step_b
-```
-
-**Multi-condition**:
-```
-next:
-  when condition1: goto step_a
-  when condition2: goto step_b
-  otherwise: goto step_default
-```
-
-### Complete Example
-
-```
-define workflow: payment_processing
-  business_domain: "Card Financial Settlement (BIAN)"
-  description: "Process customer payments and detect late fees"
-
-  triggered_by:
-    - payment received from customer
-    - daily batch at 03:00 UTC
-
-  inputs:
-    - account: account
-    - payment_amount: money
-    - processing_date: date
-
-  outputs:
-    - payment_status: text
-    - late_fee_triggered: boolean
-
-  step: detect_late_payment
-    description: "Determine if payment is late"
-
-    actions:
-      - load parameters from system
-      - calculate grace_period_end using rule
-      - evaluate should_assess_fee using rule
-
-    next:
-      when should_assess_fee: goto send_notice
-      otherwise: goto complete_no_fee
-
-  step: send_notice
-    actions:
-      - send notification to customer
-
-    next: goto trigger_fee_assessment
-
-  step: trigger_fee_assessment
-    actions:
-      - initiate fee_assessment workflow
-
-    return:
-      - payment_status: late
-      - late_fee_triggered: yes
-
-  step: complete_no_fee
-    return:
-      - payment_status: on_time
-      - late_fee_triggered: no
-```
-
-### v3.0 Pipeline Workflow Example
-
-```
-define workflow: calculate_interest
-  triggered_by: scheduled batch job (monthly)
-
-  step: calculate_and_post_interest
-    description: "Calculate interest for all accounts and post charges"
-
-    actions:
-      - discount_groups
-          | join: (dg => accounts where account_id = dg.account_id)
-          | join: (acc => transaction_categories where account_id = acc.id)
-          | map: calculate_interest(
-              balance: transaction_category.balance,
-              rate: discount_group.interest_rate
-            )
-          | foreach: post_interest_charge(account, transaction_category, monthly_interest)
-          | sum: total_interest
-
-      - log_event("Interest calculation complete", amount: total_interest)
-
-    return:
-      - total_interest: money
-
-    # Note: Infrastructure handled automatically:
-    # - Storage operations (files, database, API) abstracted
-    # - Transaction boundaries (begin, commit, rollback) automatic
-    # - Error handling uses default strategies (configurable globally)
-    # - Resource cleanup (connections, file handles) automatic
-```
-
----
-
-## Infrastructure Abstraction (v3.0)
-
-### Design Philosophy
+### Design Philosophy (v3.0)
 
 **Business users focus on WHAT, not HOW**:
 - DSL describes data transformations and business logic
@@ -1235,12 +919,12 @@ define workflow: calculate_interest
 
 **Error Handling**:
 - Infrastructure errors (file not found, network timeout) handled automatically
-- Default strategies configurable globally (see Error Handling Configuration)
+- Default strategies configurable globally
 - Business-specific error handling via explicit overrides (optional)
 
 ### Error Handling Configuration
 
-**Global Configuration** (ccdsl.config):
+**Global Configuration** (dsl.config):
 ```
 configure error_handling:
 
@@ -1279,64 +963,204 @@ configure error_handling:
 | Business Logic | `rollback_and_alert` | Rollback transaction, alert business analysts |
 | System | `rollback_and_fail` | Rollback, log critical error, fail workflow |
 
-**Custom Error Strategies**:
+---
+
+# IV. LANGUAGE CONSTRUCTS
+
+## Entity Definitions
+
+### Structure
+
 ```
-define error_strategy: escalate_to_manager
-  on_error:
-    - create incident with severity: high
-    - assign to: account_manager
-    - send notification to: customer_service_supervisor
-    - freeze entity until: manual_review_complete
-    - log event with context: full_entity_snapshot
+define entity: entity_name
+  pattern: pattern_name
+  description: "Entity purpose"
+
+  identity:
+    primary_key_field: type, unique, required
+
+  references:
+    belongs_to: other_entity
+    uses: configuration_entity
+
+  field_group_name:
+    field1: type, qualifiers
+    field2: type, qualifiers
+
+  relationships:
+    has_many: related_entities
+
+  must:
+    - constraint 1
+    - constraint 2
 ```
 
-**Override in Workflow** (when business logic requires it):
+### Section Ordering (Required)
+
+1. `pattern:` (REQUIRED - must be first)
+2. `description:` (optional)
+3. `identity:` (for entities with primary key)
+4. `references:` (foreign keys, configuration references)
+5. Custom field groups (any name, multiple allowed)
+6. `relationships:` (one-to-many relationships)
+7. `must:` (constraints)
+8. `operations:` (for specific patterns)
+
+### Complete Example
+
+```
+define entity: account
+  pattern: master_data
+  description: "Customer financial account"
+
+  identity:
+    account_id: text, unique, required
+
+  references:
+    belongs_to: customer
+    uses: product_config
+
+  account_details:
+    account_number: text, unique, cannot_change
+    opened_date: date, cannot_change
+    account_status: text, values: active | suspended | closed
+
+  financial_balances:
+    current_balance: money, required
+    credit_limit: money, required
+    available_credit: money, required
+
+  relationships:
+    has_many: transactions
+
+  must:
+    - credit_limit >= 0.00 USD
+    - available_credit <= credit_limit
+    - account_number is unique
+```
+
+---
+
+## Workflow Definitions
+
+### Structure
+
+```
+define workflow: workflow_name
+  description: "Workflow purpose"
+
+  triggered_by:
+    - trigger 1
+    - trigger 2
+
+  inputs:
+    - input1: type
+    - input2: type
+
+  outputs:
+    - output1: type
+    - output2: type
+
+  step: step_name_1
+    description: "Step purpose"
+
+    actions:
+      - action 1
+      - action 2
+
+    next:
+      when condition: goto step_name_2
+      otherwise: goto step_name_3
+
+  step: step_name_2
+    actions:
+      - action
+
+    return:
+      - field1: value1
+      - field2: value2
+```
+
+### Pipeline Actions (v3.0)
+
+**Pipeline Operators**:
+
+| Operator | Purpose | Example |
+|----------|---------|---------|
+| `filter: condition` | Keep matching records | `filter: balance > 1000.00 USD` |
+| `map: transformation` | Transform each record | `map: calculate_interest` |
+| `foreach: action` | Execute action on each | `foreach: post_charge` |
+| `reduce: aggregation` | Combine into single value | `reduce: sum` |
+| `join: (alias => entity where condition)` | Navigate relationships | `join: (acc => accounts where id = acc.id)` |
+| `group_by: field` | Group records | `group_by: customer_id` |
+| `order_by: field [asc\|desc]` | Sort records | `order_by: date desc` |
+| `take: n` | Limit results | `take: 100` |
+| `count: variable` | Count items | `count: total_records` |
+| `sum: variable` | Sum numeric field | `sum: total_amount` |
+| `avg: variable` | Average of field | `avg: avg_balance` |
+| `on_validation_error: strategy` | Override error handling | `on_validation_error: escalate` |
+
+**Example**:
 ```
 actions:
-  - vip_customers
-      | filter: validate_credit_score
-      | on_validation_error: escalate_to_manager  # Override default
-      | foreach: approve_credit_increase
+  - customers
+      | filter: validate_entity
+      | map: calculate_interest
+      | foreach: post_interest_charge
+      | sum: total_interest
+
+  - log_event("Processing complete", amount: total_interest)
 ```
 
-### Debugging with Verbose Mode
+### Complete Example
 
-**Enable verbose output** to see infrastructure operations:
-```bash
-ccdsl compile --verbose workflows/interest_calculation.dsl
-ccdsl run --verbose workflows/interest_calculation.dsl
 ```
+define workflow: payment_processing
+  description: "Process customer payments"
 
-**Verbose Output Example**:
-```
-[VERBOSE] Step: calculate_and_post_interest
-[VERBOSE]   Pipeline execution plan:
-[VERBOSE]     1. Load discount_groups from database (master_data pattern)
-[VERBOSE]     2. Join with accounts (1:1 relationship)
-[VERBOSE]     3. Join with transaction_categories (1:N relationship)
-[VERBOSE]   Resource management:
-[VERBOSE]     - Transaction boundary: BEGIN
-[VERBOSE]     - Database connection pool: acquired (3/10 in use)
-[VERBOSE]   Error handling:
-[VERBOSE]     - Infrastructure errors: retry_then_fail (max 3 retries)
-[VERBOSE]     - Validation errors: skip_and_log
-[VERBOSE]   Execution:
-[VERBOSE]     ✓ Loaded 1,247 discount_groups (142ms)
-[VERBOSE]     ✓ Calculated interest for 4,891 records (1,203ms)
-[VERBOSE]   Resource cleanup:
-[VERBOSE]     - Transaction: COMMIT (45ms)
-[VERBOSE]     - Database connection: returned to pool
+  triggered_by:
+    - payment received from customer
+    - daily batch at 03:00 UTC
+
+  inputs:
+    - account: account
+    - payment_amount: money
+    - processing_date: date
+
+  outputs:
+    - payment_status: text
+    - fee_triggered: boolean
+
+  step: validate_payment
+    description: "Validate payment details"
+
+    actions:
+      - load parameters from system
+      - validate payment_amount > 0.00 USD
+      - check account status is active
+
+    next:
+      when account.status == active: goto process_payment
+      otherwise: goto reject_payment
+
+  step: process_payment
+    actions:
+      - update account.balance
+      - create transaction record
+
+    return:
+      - payment_status: completed
+      - fee_triggered: no
+
+  step: reject_payment
+    return:
+      - payment_status: rejected
+      - fee_triggered: no
 ```
 
 ---
 
 ## Rule Definitions
-
-### Overview
-
-Rules can be defined in two ways:
-1. **Procedural Rules** - Traditional calculation/validation logic (v1.0)
-2. **Decision Tables** - Matrix-based conditional logic (v3.1 NEW)
 
 ### Procedural Rule Structure
 
@@ -1364,7 +1188,7 @@ define rules: rule_group_name
         then: expected outputs
 ```
 
-### Decision Table Structure (v3.1 NEW)
+### Decision Table Structure (v3.1)
 
 ```
 define rules: rule_group_name
@@ -1388,42 +1212,17 @@ define rules: rule_group_name
     return:
       - output1: type
       - output2: type
-
-    # OR for executable actions:
-    execute: yes
-```
-
-**Key Features**:
-- `→` arrow separates conditions from actions
-- `*` wildcard for default/any value
-- Supports: exact match, ranges, expressions, function calls
-- Actions can be return values or executable functions
-- First-match semantics (top-to-bottom)
-
-**See**: DSL_DECISION_TABLES_SPECIFICATION.md for complete decision table documentation
-
-### Calculation Logic
-
-```
-calculate:
-  variable = expression
-
-  when condition: value
-  when other_condition: other_value
-  otherwise: default_value
-
-  nested_calculation = combine(var1, var2)
 ```
 
 ### Complete Example
 
 ```
-define rules: late_fee_calculation
+define rules: fee_calculation
   pattern: business_logic
-  description: "Calculate late fees with regulatory compliance"
+  description: "Calculate fees with regulatory compliance"
 
   rule: calculate_fee_amount
-    description: "Tiered fee calculation with CARD Act caps"
+    description: "Tiered fee calculation"
 
     given:
       - account_balance: money
@@ -1432,13 +1231,13 @@ define rules: late_fee_calculation
 
     calculate:
       base_fee =
-        when account_balance >= $5000: $40
-        when account_balance >= $1000: $35
-        otherwise: $25
+        when account_balance >= 5000.00 USD: 40.00 USD
+        when account_balance >= 1000.00 USD: 35.00 USD
+        otherwise: 25.00 USD
 
       calculated_fee =
         when is_repeat_violation: base_fee
-        otherwise: min(base_fee, $30)
+        otherwise: min(base_fee, 30.00 USD)
 
       final_fee = min(calculated_fee, maximum_fee)
 
@@ -1447,18 +1246,18 @@ define rules: late_fee_calculation
 
     examples:
       - given:
-          account_balance: $2500
+          account_balance: 2500.00 USD
           is_repeat_violation: no
-          maximum_fee: $30
+          maximum_fee: 30.00 USD
         then:
-          fee_amount: $30
+          fee_amount: 30.00 USD
 
       - given:
-          account_balance: $6000
+          account_balance: 6000.00 USD
           is_repeat_violation: yes
-          maximum_fee: $40
+          maximum_fee: 40.00 USD
         then:
-          fee_amount: $40
+          fee_amount: 40.00 USD
 ```
 
 ---
@@ -1485,28 +1284,18 @@ define parameters: parameter_group_name
       change_frequency: frequency
 ```
 
-### Parameter Types
-
-- `number` - Integer or decimal
-- `money` - Money amount
-- `text` - String value
-- `boolean` - yes/no
-- `duration` - Time period (hours, days)
-- `time` - Time of day
-- `percentage` - Percentage value
-
 ### Complete Example
 
 ```
-define parameters: late_fee_settings
+define parameters: fee_settings
   pattern: operational_parameters
   environment: PRODUCTION
-  description: "Late fee calculation parameters"
+  description: "Fee calculation parameters"
 
   grace_period_settings:
 
     parameter: grace_period_days
-      description: "Days after due date before late fee applies"
+      description: "Days after due date before fee applies"
       type: number
       current_value: 15
       default_value: 15
@@ -1526,9 +1315,9 @@ define parameters: late_fee_settings
     parameter: auto_waiver_limit
       description: "Fees below this auto-approved if eligible"
       type: money
-      current_value: $25.00
-      default_value: $25.00
-      range: $0 to $100
+      current_value: 25.00 USD
+      default_value: 25.00 USD
+      range: 0.00 USD to 100.00 USD
       can_schedule: yes
 ```
 
@@ -1543,11 +1332,11 @@ define reference: reference_name
   pattern: reference_data
 
   values:
-    ENUM_VALUE_1:
+    enum_value_1:
       name: "Display Name"
       description: "Description"
 
-    ENUM_VALUE_2:
+    enum_value_2:
       name: "Display Name"
       description: "Description"
 ```
@@ -1581,7 +1370,7 @@ define reference: customer_segment
 Some entities need **multiple patterns**:
 
 ```
-define entity: card_product
+define entity: product_config
   pattern: versioned_configuration
   pattern: temporal_data
 
@@ -1598,7 +1387,7 @@ define entity: account
     account_number: text, cannot_change  # Immutable override
 
   state_tracking:
-    delinquency_status: delinquency_state  # State machine pattern
+    status: process_state  # State machine pattern
 ```
 
 ---
@@ -1634,30 +1423,26 @@ define entity: state_entity_name
 ### Example
 
 ```
-define entity: delinquency_state
+define entity: process_state
   pattern: state_machine
 
   tracks_state_for: account
-  current_state: text, values: current | delinquent_15 | delinquent_30
+  current_state: text, values: pending | approved | rejected
   state_entered_date: date
 
-  initial_state: current
+  initial_state: pending
 
   transitions:
-    from current: delinquent_15
-    from delinquent_15: current, delinquent_30
-    from delinquent_30: current
+    from pending: approved, rejected
+    from approved: none
+    from rejected: none
 
   on_enter_state:
-    when delinquent_15:
-      - send notification with type warning
+    when approved:
+      - send notification with type approval
 
-    when delinquent_30:
-      - send notification with type escalation
-      - report to credit_bureaus
-
-    when current:
-      - send notification with type account_current
+    when rejected:
+      - send notification with type rejection
 ```
 
 ---
@@ -1667,11 +1452,11 @@ define entity: delinquency_state
 ### Effective-Dated Values
 
 ```
-define entity: credit_limit
+define entity: interest_rate
   pattern: temporal_data
 
   for_account: account
-  credit_limit_amount: money
+  rate_percentage: percentage
   effective_from: date
   effective_until: date, optional
 ```
@@ -1685,11 +1470,11 @@ define entity: credit_limit
 ### Usage in Workflows
 
 ```
-step: apply_limit
+step: apply_rate
   actions:
-    - set credit limit to $5000 effective 2024-02-01
-    - get current credit limit for account
-    - get credit limit at date 2024-01-15
+    - set interest rate to 12.5 effective 2024-02-01
+    - get current interest rate for account
+    - get interest rate at date 2024-01-15
 ```
 
 ---
@@ -1705,7 +1490,7 @@ define, entity, workflow, rules, parameters, reference
 
 ### Entity Keywords
 ```
-pattern, business_domain, description
+pattern, description
 identity, references, relationships
 must, cannot, operations
 belongs_to, has_many, uses
@@ -1720,6 +1505,7 @@ step, actions, next, goto, when, otherwise, return
 ### Rule Keywords
 ```
 rule, given, calculate, evaluate, when, then, otherwise, return, examples
+decision_table, decide
 ```
 
 ### Parameter Keywords
@@ -1745,60 +1531,6 @@ unique, required, optional, cannot_change, encrypted, default
 ### Special Values
 ```
 yes, no, null, now, today
-```
-
----
-
-## BIAN Terminology Reference
-
-### BIAN Service Domains
-
-| Service Domain | DSL Usage | Purpose |
-|----------------|-----------|---------|
-| Credit Card | Entities | Card fulfillment and tracking |
-| Card Financial Settlement | Workflows | Payment and fee processing |
-| Card Case | Workflows | Dispute management |
-| Card Collections | State machines | Delinquency and collections |
-| Product Directory | Configuration | Product and fee schedules |
-
-### BIAN Alignment Benefits
-
-1. **Standardization**: Industry-standard terminology
-2. **Interoperability**: Easy integration with banking systems
-3. **Best Practices**: Regulatory compliance built-in
-4. **Common Language**: Cross-institution communication
-
----
-
-## Migration Guide
-
-### From Earlier Versions
-
-**Version 1.0 → 2.0 Changes**:
-
-1. **Enum naming**: SCREAMING_SNAKE_CASE → snake_case
-   ```
-   # Old
-   values: PREMIER | PREFERRED
-
-   # New
-   values: premier | preferred
-   ```
-
-2. **Boolean values**: true/false → yes/no
-   ```
-   # Old
-   enabled: true
-
-   # New
-   enabled: yes
-   ```
-
-3. **Consistency**: All identifiers now snake_case
-
-**Automated Migration**:
-```bash
-dsl-compiler migrate --from-v1 --to-v2 file.dsl
 ```
 
 ---
@@ -1829,8 +1561,15 @@ dsl-compiler schema --database postgres --output ./schema file.dsl
 dsl-compiler api --format openapi --output ./api file.dsl
 ```
 
+### Verbose Mode
+
+```bash
+dsl-compiler compile --verbose file.dsl
+dsl-compiler run --verbose file.dsl
+```
+
 ---
 
-**End of Language Specification**
+**End of Core DSL Specification**
 
-For complete working examples, see: **DSL_SAMPLES.md**
+This specification provides the domain-agnostic technical foundation for all financial services DSLs. Domain-specific knowledge should be implemented in Domain DSL modules that import and extend these core constructs.

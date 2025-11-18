@@ -1,10 +1,13 @@
 (* ========================================== *)
-(* Credit Card DSL - Complete Formal Grammar *)
+(* Financial Services DSL - Complete Formal Grammar *)
 (* ========================================== *)
 (* EBNF Notation - ISO/IEC 14977 *)
 (* Status: Complete specification *)
 (*
+   Architecture: Modular (Core + Domain DSLs)
+
    Features:
+   - Module system with imports and versioning
    - Entity definitions (9 data mutation patterns)
    - Workflow definitions (traditional and pipeline syntax)
    - Rule definitions (procedural and decision tables)
@@ -19,7 +22,7 @@
 (* ROOT PRODUCTION *)
 (* ========================================== *)
 
-dsl_file = { definition } ;
+dsl_file = [ module_declaration ], { import_declaration }, { definition } ;
 
 definition =
     entity_definition
@@ -30,6 +33,78 @@ definition =
   | error_strategy_definition
   | configuration_block
   | action_definition ;
+
+
+(* ========================================== *)
+(* MODULE SYSTEM *)
+(* ========================================== *)
+
+module_declaration =
+    "module", ":", module_identifier,
+    "version", ":", semantic_version,
+    "stability", ":", stability_level,
+    [ "description", ":", string_literal ],
+    [ "author", ":", string_literal ],
+    [ "license", ":", string_literal ],
+    [ bian_domains_declaration ],
+    [ exports_declaration ] ;
+
+module_identifier =
+    module_type, ".", identifier ;
+
+module_type =
+    "core" | "domain" ;
+
+semantic_version =
+    integer_literal, ".", integer_literal, ".", integer_literal ;
+
+stability_level =
+    "stable" | "beta" | "alpha" ;
+
+bian_domains_declaration =
+    "bian_domains", ":",
+    { "-", string_literal } ;
+
+exports_declaration =
+    "exports", ":",
+    { export_group } ;
+
+export_group =
+    export_category, ":",
+    { "-", identifier } ;
+
+export_category =
+    "patterns" | "types" | "constraints" | "operators" |
+    "entities" | "workflows" | "rules" | "parameters" ;
+
+import_declaration =
+    "imports", ":",
+    { import_statement } ;
+
+import_statement =
+    "-", module_identifier, [ version_constraint ],
+    [ import_selector ],
+    [ import_alias ] ;
+
+version_constraint =
+    comparison_operator, semantic_version |
+    "^", semantic_version |
+    "~", semantic_version ;
+
+comparison_operator =
+    ">=" | ">" | "<=" | "<" | "=" ;
+
+import_selector =
+    ":", "{", { import_item }, "}" ;
+
+import_item =
+    import_category, ":", "[", { identifier }, "]" ;
+
+import_category =
+    "patterns" | "types" | "operators" | "constructs" ;
+
+import_alias =
+    "as", identifier ;
 
 
 (* ========================================== *)
