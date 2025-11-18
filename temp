@@ -1,0 +1,6 @@
+| if     | status  | Action |
+|--------|---------|--------|
+| success | 200     | Proceed |
+| failure | 400     | Retry   |
+| pending | 102     | Wait    |
+|--------|---------|--------|

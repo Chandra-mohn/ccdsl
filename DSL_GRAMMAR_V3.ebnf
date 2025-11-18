@@ -1,0 +1,658 @@
+(* Credit Card DSL - Formal Grammar v3.0 *)
+(* EBNF Notation - ISO/IEC 14977 *)
+(* Date: 2025-11-17 *)
+
+(* ========================================== *)
+(* ROOT PRODUCTION *)
+(* ========================================== *)
+
+dsl_file = { definition } ;
+
+definition =
+    entity_definition
+  | workflow_definition
+  | rule_definition
+  | parameter_definition
+  | reference_data_definition
+  | error_strategy_definition
+  | configuration_block ;
+
+
+(* ========================================== *)
+(* ENTITY DEFINITIONS *)
+(* ========================================== *)
+
+entity_definition =
+    "define", "entity", ":", identifier,
+    pattern_declaration,
+    [ business_domain ],
+    [ description ],
+    { field_group },
+    [ relationships ],
+    [ constraints ] ;
+
+pattern_declaration =
+    "pattern", ":", pattern_name ;
+
+pattern_name =
+    "master_data"
+  | "immutable_ledger"
+  | "versioned_configuration"
+  | "operational_parameters"
+  | "event_log"
+  | "state_machine"
+  | "temporal_data"
+  | "reference_data"
+  | "business_logic" ;
+
+field_group =
+    identifier, ":", { field_definition } ;
+
+field_definition =
+    identifier, ":", type_spec, { type_qualifier } ;
+
+type_spec =
+    "text" | "number" | "money" | "date" | "datetime" |
+    "boolean" | "phone" | "email" | "ssn" | "percentage" ;
+
+type_qualifier =
+    "required" | "optional" | "unique" | "encrypted" |
+    "cannot_change" | "system_managed" |
+    ( "between", expression, "and", expression ) |
+    ( "values", ":", enum_values ) |
+    ( "default", ":", literal ) ;
+
+enum_values = literal, { "|", literal } ;
+
+relationships =
+    "relationships", ":", { relationship_declaration } ;
+
+relationship_declaration =
+    ( "belongs_to" | "has_many" | "has_one" ), ":", identifier ;
+
+constraints =
+    "must", ":", { constraint_expression } ;
+
+constraint_expression =
+    "-", expression ;
+
+
+(* ========================================== *)
+(* WORKFLOW DEFINITIONS (v3.0) *)
+(* ========================================== *)
+
+workflow_definition =
+    "define", "workflow", ":", identifier,
+    [ business_domain ],
+    [ description ],
+    [ triggered_by ],
+    [ inputs ],
+    [ outputs ],
+    { workflow_step } ;
+
+workflow_step =
+    "step", ":", identifier,
+    [ description ],
+    "actions", ":", action_block,
+    ( next_logic | return_statement ) ;
+
+(* Action Block - supports both traditional and pipeline syntax *)
+action_block =
+    { action_statement } ;
+
+action_statement =
+    "-", ( traditional_action | pipeline_expression | variable_assignment | control_structure ) ;
+
+(* Traditional Actions (v2.0 - backward compatible) *)
+traditional_action =
+    action_call
+  | for_each_loop
+  | if_statement
+  | create_statement
+  | update_statement
+  | delete_statement
+  | notification_statement ;
+
+action_call =
+    identifier, [ "(", argument_list, ")" ] ;
+
+for_each_loop =
+    "for", "each", identifier, "in", expression, ":", { action_statement } ;
+
+if_statement =
+    "if", expression, ":", { action_statement },
+    [ "else", ":", { action_statement } ] ;
+
+(* Pipeline Expressions (v3.0 - new) *)
+pipeline_expression =
+    entity_source, { pipeline_operator } ;
+
+entity_source =
+    identifier                                      (* Simple entity reference *)
+  | identifier, "where", filter_condition          (* Filtered source *)
+  | "(", subquery, ")" ;                           (* Subquery *)
+
+pipeline_operator =
+    "|", (
+        filter_operator
+      | map_operator
+      | foreach_operator
+      | reduce_operator
+      | join_operator
+      | group_by_operator
+      | order_by_operator
+      | take_operator
+      | aggregation_operator
+      | error_handling_operator
+    ) ;
+
+(* Pipeline Operator Definitions *)
+filter_operator =
+    "filter", ":", condition ;
+
+map_operator =
+    "map", ":", transformation ;
+
+foreach_operator =
+    "foreach", ":", action_call ;
+
+reduce_operator =
+    "reduce", ":", aggregation_function ;
+
+join_operator =
+    "join", ":", "(", identifier, "=>", identifier, "where", condition, ")" ;
+
+group_by_operator =
+    "group_by", ":", identifier ;
+
+order_by_operator =
+    "order_by", ":", identifier, [ "asc" | "desc" ] ;
+
+take_operator =
+    "take", ":", integer_literal ;
+
+aggregation_operator =
+    ( "count" | "sum" | "avg" | "min" | "max" ), ":", identifier ;
+
+error_handling_operator =
+    ( "on_validation_error" | "on_calculation_error" | "on_duplicate_key" ),
+    ":", identifier ;
+
+transformation =
+    identifier, [ "(", argument_list, ")" ] ;
+
+aggregation_function =
+    identifier, "(", expression, ")" ;
+
+(* Control Flow *)
+next_logic =
+    "next", ":", ( goto_statement | conditional_transitions ) ;
+
+goto_statement =
+    "goto", identifier ;
+
+conditional_transitions =
+    { "when", expression, ":", goto_statement },
+    [ "otherwise", ":", goto_statement ] ;
+
+return_statement =
+    "return", ":", { return_value } ;
+
+return_value =
+    "-", identifier, ":", expression ;
+
+
+(* ========================================== *)
+(* RULE DEFINITIONS *)
+(* ========================================== *)
+
+rule_definition =
+    "define", "rules", ":", identifier,
+    "pattern", ":", "business_logic",
+    [ description ],
+    { rule } ;
+
+rule =
+    "rule", ":", identifier,
+    [ description ],
+    [ given_clause ],
+    ( calculate_clause | evaluate_clause | validate_clause ),
+    [ return_clause ] ;
+
+given_clause =
+    "given", ":", { input_parameter } ;
+
+input_parameter =
+    "-", identifier, ":", type_spec ;
+
+calculate_clause =
+    "calculate", ":", { calculation_expression } ;
+
+calculation_expression =
+    identifier, "=", expression ;
+
+evaluate_clause =
+    "evaluate", ":", { evaluation_expression } ;
+
+evaluation_expression =
+    identifier, "=", boolean_expression ;
+
+validate_clause =
+    "validate", ":", { validation_rule } ;
+
+validation_rule =
+    "-", expression ;
+
+return_clause =
+    "return", ":", { return_parameter } ;
+
+return_parameter =
+    "-", identifier, ":", type_spec ;
+
+
+(* ========================================== *)
+(* ERROR STRATEGY DEFINITIONS (v3.0) *)
+(* ========================================== *)
+
+error_strategy_definition =
+    "define", "error_strategy", ":", identifier,
+    "on_error", ":", { error_action } ;
+
+error_action =
+    "-", action_statement ;
+
+
+(* ========================================== *)
+(* CONFIGURATION BLOCKS (v3.0) *)
+(* ========================================== *)
+
+configuration_block =
+    "configure", identifier, ":", { config_section } ;
+
+config_section =
+    identifier, ":", { config_property } ;
+
+config_property =
+    identifier, ":", ( literal | identifier ) ;
+
+
+(* ========================================== *)
+(* PARAMETER DEFINITIONS (PCF) *)
+(* ========================================== *)
+
+parameter_definition =
+    "define", "parameters", ":", identifier,
+    "pattern", ":", "operational_parameters",
+    [ description ],
+    { parameter_field } ;
+
+parameter_field =
+    identifier, ":", { param_version } ;
+
+param_version =
+    "version", identifier, ":", literal, [ ",", "effective", ":", date_literal ] ;
+
+
+(* ========================================== *)
+(* REFERENCE DATA DEFINITIONS *)
+(* ========================================== *)
+
+reference_data_definition =
+    "define", "reference", ":", identifier,
+    "pattern", ":", "reference_data",
+    [ description ],
+    { reference_entry } ;
+
+reference_entry =
+    identifier, ":", literal ;
+
+
+(* ========================================== *)
+(* EXPRESSIONS *)
+(* ========================================== *)
+
+expression =
+    logical_or_expression ;
+
+logical_or_expression =
+    logical_and_expression, { "or", logical_and_expression } ;
+
+logical_and_expression =
+    comparison_expression, { "and", comparison_expression } ;
+
+comparison_expression =
+    additive_expression, [ comparison_operator, additive_expression ] ;
+
+comparison_operator =
+    "=" | "!=" | "<" | "<=" | ">" | ">=" | "is" | "is not" ;
+
+additive_expression =
+    multiplicative_expression, { ( "+" | "-" ), multiplicative_expression } ;
+
+multiplicative_expression =
+    unary_expression, { ( "*" | "/" | "%" ), unary_expression } ;
+
+unary_expression =
+    [ "not" | "-" ], primary_expression ;
+
+primary_expression =
+    literal
+  | identifier
+  | field_reference
+  | function_call
+  | "(", expression, ")" ;
+
+field_reference =
+    identifier, ".", identifier ;
+
+function_call =
+    identifier, "(", [ argument_list ], ")" ;
+
+argument_list =
+    argument, { ",", argument } ;
+
+argument =
+    [ identifier, ":" ], expression ;
+
+boolean_expression =
+    expression ;
+
+condition =
+    expression ;
+
+filter_condition =
+    expression ;
+
+subquery =
+    pipeline_expression ;
+
+
+(* ========================================== *)
+(* STATEMENTS *)
+(* ========================================== *)
+
+variable_assignment =
+    identifier, "=", expression ;
+
+create_statement =
+    "create", identifier, [ "with", ":", field_assignments ] ;
+
+update_statement =
+    "update", field_reference ;
+
+delete_statement =
+    "delete", identifier ;
+
+notification_statement =
+    "send", identifier, "to", identifier ;
+
+field_assignments =
+    { "-", identifier, ":", expression } ;
+
+
+(* ========================================== *)
+(* LITERALS *)
+(* ========================================== *)
+
+literal =
+    string_literal
+  | integer_literal
+  | decimal_literal
+  | money_literal
+  | date_literal
+  | boolean_literal ;
+
+string_literal =
+    '"', { character - '"' }, '"' ;
+
+integer_literal =
+    digit, { digit } ;
+
+decimal_literal =
+    integer_literal, ".", integer_literal ;
+
+money_literal =
+    "$", decimal_literal ;
+
+date_literal =
+    digit, digit, digit, digit, "-", digit, digit, "-", digit, digit ;
+
+boolean_literal =
+    "true" | "false" | "yes" | "no" ;
+
+
+(* ========================================== *)
+(* IDENTIFIERS & KEYWORDS *)
+(* ========================================== *)
+
+identifier =
+    letter, { letter | digit | "_" } ;
+
+business_domain =
+    "business_domain", ":", string_literal ;
+
+description =
+    "description", ":", string_literal ;
+
+triggered_by =
+    "triggered_by", ":", { "-", string_literal } ;
+
+inputs =
+    "inputs", ":", { "-", identifier, ":", type_spec } ;
+
+outputs =
+    "outputs", ":", { "-", identifier, ":", type_spec } ;
+
+
+(* ========================================== *)
+(* LEXICAL ELEMENTS *)
+(* ========================================== *)
+
+letter = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" |
+         "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" |
+         "u" | "v" | "w" | "x" | "y" | "z" |
+         "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" |
+         "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" |
+         "U" | "V" | "W" | "X" | "Y" | "Z" ;
+
+digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+
+character = letter | digit | special_char ;
+
+special_char = "!" | "@" | "#" | "$" | "%" | "^" | "&" | "*" | "(" | ")" |
+               "-" | "_" | "=" | "+" | "[" | "]" | "{" | "}" | "|" | "\" |
+               ";" | ":" | "'" | '"' | "," | "." | "<" | ">" | "/" | "?" |
+               " " | "\t" | "\n" | "\r" ;
+
+
+(* ========================================== *)
+(* COMMENTS *)
+(* ========================================== *)
+
+(* Single-line comments start with '#' and continue to end of line *)
+(* Multi-line comments not supported in v3.0 *)
+
+
+(* ========================================== *)
+(* RESERVED KEYWORDS *)
+(* ========================================== *)
+
+(* Keywords that cannot be used as identifiers:
+
+   Entity & Pattern Keywords:
+   - define, entity, pattern, business_domain, description
+   - master_data, immutable_ledger, versioned_configuration,
+     operational_parameters, event_log, state_machine,
+     temporal_data, reference_data, business_logic
+
+   Type Keywords:
+   - text, number, money, date, datetime, boolean,
+     phone, email, ssn, percentage
+
+   Type Qualifiers:
+   - required, optional, unique, encrypted, cannot_change,
+     system_managed, between, and, values, default
+
+   Relationship Keywords:
+   - relationships, belongs_to, has_many, has_one
+
+   Constraint Keywords:
+   - must
+
+   Workflow Keywords:
+   - workflow, triggered_by, inputs, outputs, step, actions,
+     next, when, otherwise, goto, return
+
+   Pipeline Operators (v3.0):
+   - filter, map, foreach, reduce, join, group_by, order_by,
+     take, count, sum, avg, min, max
+
+   Error Handling (v3.0):
+   - on_validation_error, on_calculation_error, on_duplicate_key,
+     error_strategy, on_error
+
+   Configuration (v3.0):
+   - configure
+
+   Traditional Action Keywords:
+   - for, each, in, if, else, create, update, delete, send, to, with
+
+   Rule Keywords:
+   - rules, rule, given, calculate, evaluate, validate
+
+   Parameter Keywords:
+   - parameters, version, effective
+
+   Reference Data Keywords:
+   - reference
+
+   Logical Operators:
+   - or, and, not, is
+
+   Boolean Literals:
+   - true, false, yes, no
+*)
+
+
+(* ========================================== *)
+(* OPERATOR PRECEDENCE *)
+(* ========================================== *)
+
+(* Operator precedence (highest to lowest):
+
+   1. Primary: literals, identifiers, field references, function calls, parentheses
+   2. Unary: not, - (negation)
+   3. Multiplicative: *, /, %
+   4. Additive: +, -
+   5. Comparison: =, !=, <, <=, >, >=, is, is not
+   6. Logical AND: and
+   7. Logical OR: or
+   8. Pipeline: | (left-to-right chaining)
+*)
+
+
+(* ========================================== *)
+(* WHITESPACE & INDENTATION *)
+(* ========================================== *)
+
+(* Whitespace (spaces, tabs, newlines) is significant for:
+   - Indentation-based block structure (Python-style)
+   - List item markers (- prefix)
+
+   Indentation rules:
+   - Use 2 or 4 spaces (consistent within file)
+   - Tabs converted to spaces
+   - Increased indentation = nested block
+   - Decreased indentation = end block
+
+   Example:
+
+   define workflow: example
+     step: first_step
+       actions:
+         - action1
+         - action2
+       next: goto second_step
+*)
+
+
+(* ========================================== *)
+(* BACKWARD COMPATIBILITY NOTES *)
+(* ========================================== *)
+
+(* v3.0 is fully backward compatible with v2.0:
+
+   - All v2.0 syntax remains valid
+   - Traditional actions work alongside pipeline syntax
+   - Explicit file operations (open_files, close_files) still supported
+   - Explicit error handling steps still functional
+   - Migration from v2.0 to v3.0 is optional and gradual
+
+   Recommended migration path:
+   1. Use pipeline syntax for new workflows
+   2. Convert existing workflows incrementally
+   3. Mix v2.0 and v3.0 syntax during transition
+
+   Deprecation timeline:
+   - v3.0: Both syntaxes equally supported
+   - v3.5 (6 months): v2.0 syntax deprecated (warnings)
+   - v4.0 (12 months): v2.0 syntax removed
+*)
+
+
+(* ========================================== *)
+(* EXAMPLE PRODUCTIONS *)
+(* ========================================== *)
+
+(* Example: Simple pipeline workflow
+
+   define workflow: calculate_interest
+     triggered_by: scheduled batch job
+
+     step: process_accounts
+       actions:
+         - accounts
+             | filter: is_active
+             | map: calculate_interest
+             | foreach: post_charge
+             | sum: total_interest
+
+         - log_event("Complete", amount: total_interest)
+
+       return:
+         - total_interest: money
+*)
+
+(* Example: Pipeline with join and error override
+
+   step: process_vip_customers
+     actions:
+       - vip_customers
+           | filter: validate_credit_score
+           | on_validation_error: escalate_to_manager
+           | join: (c => accounts where customer_id = c.id)
+           | map: calculate_credit_increase
+           | foreach: approve_increase
+*)
+
+(* Example: Mixed v2.0 and v3.0 syntax
+
+   step: complex_processing
+     actions:
+       - initialize report_data
+
+       - customers
+           | filter: is_eligible
+           | foreach: add_to_report
+
+       - for each summary in report_data:
+           - if summary.requires_approval:
+               - send notification to manager
+
+       - finalize report_data
+*)
+
+
+(* ========================================== *)
+(* END OF GRAMMAR *)
+(* ========================================== *)
